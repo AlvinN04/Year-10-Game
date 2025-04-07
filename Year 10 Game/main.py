@@ -11,7 +11,8 @@ pygame.mixer.init()
 width = 800
 height = 600
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("side scrolling")
+pygame.display.set_caption("Side Scrolling")
+
 
 # Font
 font = pygame.font.Font(None, 36)
@@ -20,6 +21,10 @@ font = pygame.font.Font(None, 36)
 text_surface = font.render("score:0", True, (255, 255, 255)) 
 text_rect = text_surface.get_rect()
 text_rect.topleft = (10, 10)  
+
+# Background
+
+background = pygame.image.load("background.jpg").convert()
 
 # Player sprite
 sprite_image = pygame.image.load("sprite.png").convert_alpha()
@@ -35,13 +40,13 @@ penguin_speed = 1
 penguin_width = penguin_rect.width
 penguin_height = penguin_rect.height
 
-#camrea
-camrera_x = 0
-camrera_y = 0
+# Camera
+camera_x = 0
+camera_y = 0
 
-#Backround
-backround_image = pygame.image.load("backround.jpg").convert()
-backround_rect = backround_image.get_rect()
+# Level Dimensions (made wider for scrolling)
+level_width = 1600  # Make the level wide enough for scrolling
+level_height = 1800
 
 # Score 
 score = 0
@@ -53,6 +58,7 @@ clock = pygame.time.Clock()
 # Sound
 pygame.mixer.music.load("applause.wav")
 pygame.mixer.music.set_volume(0.7)
+
 
 # Game state
 game_state = "MENU"  
@@ -82,39 +88,69 @@ def menu_state():
     screen.blit(quit_text, quit_rect)
 
 def playing_state():
+    global camera_x, camera_y
     global score
 
     keys = pygame.key.get_pressed()
 
+    # Background Image
+    screen.blit(background, (0, 0))
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
     # Player Movement
     if keys[pygame.K_RIGHT]:
-        sprite_rect.x += sprite_speed
+        if sprite_rect.right < level_width:
+            sprite_rect.x += sprite_speed
     if keys[pygame.K_LEFT]:
-        sprite_rect.x -= sprite_speed
+        if sprite_rect.left > 0:
+            sprite_rect.x -= sprite_speed
     if keys[pygame.K_UP]:
-        sprite_rect.y -= sprite_speed
+        if sprite_rect.top > 0:
+            sprite_rect.y -= sprite_speed
     if keys[pygame.K_DOWN]:
-        sprite_rect.y += sprite_speed
+        if sprite_rect.bottom < level_height:
+            sprite_rect.y += sprite_speed
+
+    # Enemy Movement (simple auto movement)
+    if penguin_rect.centerx < sprite_rect.centerx:
+        penguin_rect.x += penguin_speed
+    elif penguin_rect.centerx > sprite_rect.centerx:
+        penguin_rect.x -= penguin_speed
+
+    if penguin_rect.centery < sprite_rect.centery:
+        penguin_rect.y += penguin_speed
+    elif penguin_rect.centery > sprite_rect.centery:
+        penguin_rect.y -= penguin_speed
+
+    # Update camera position
+    camera_x = -sprite_rect.centerx + width // 2
+    camera_y = -sprite_rect.centery + height // 2
+
+    # Camera boundaries to prevent moving out of the level
+    if camera_x > 0:
+        camera_x = 0
+    if camera_x < -level_width + width:
+        camera_x = -level_width + width
+
+    if camera_y > 0:
+        camera_y = 0
+    if camera_y < -level_height + height:
+        camera_y = -level_height + height
 
 
-    #Camera Movement
-    camrera_x = -sprite_rect.centerx + width // 2
-    camrera_y = -sprite_rect.centery + height // 2
-
-
-    # Drawing
-    screen.fill((0, 0, 0))  # Clear screen (black)
-    screen.blit(sprite_image, sprite_rect)  # Draw player sprite
-    screen.blit(penguin_image, penguin_rect)  # Draw enemy sprite
+    # Draw the player and enemy (offset by the camera)
+    screen.blit(sprite_image, (sprite_rect.x + camera_x, sprite_rect.y + camera_y))
+    screen.blit(penguin_image, (penguin_rect.x + camera_x, penguin_rect.y + camera_y))
 
     # Rendering the score text
     score_text = font.render(f"Score: {score}", True, (255, 255, 255))
     screen.blit(score_text, (10, 10))
 
+
 def game_over_state():
     global score
-
-    global camera_x, camera_y
     screen.fill((0, 0, 0))  # Clear screen (black)
     game_over_text = font.render(f"Game Over! Score: {score}", True, (255, 255, 255))
     game_over_rect = game_over_text.get_rect(center=(width // 2, height // 4))
@@ -170,7 +206,7 @@ while running:
 
         # Press 'P' to pause or unpause
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_p:  # Toggle pause
+            if event.key == pygame.K_m:  
                 if game_state == "PLAYING":
                     game_state = "PAUSE"
                 elif game_state == "PAUSE":
@@ -185,7 +221,7 @@ while running:
     elif game_state == "PAUSE":
         pause_state()
 
-    pygame.display.flip()  # Update the display
-    clock.tick(60)  # Maintain 60 FPS
 
+    clock.tick(60) 
+    pygame.display.flip()   
 pygame.quit()
