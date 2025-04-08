@@ -13,6 +13,8 @@ height = 600
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Side Scrolling")
 
+# Game state
+game_state = "MENU"  
 
 # Font
 font = pygame.font.Font(None, 36)
@@ -23,14 +25,16 @@ text_rect = text_surface.get_rect()
 text_rect.topleft = (10, 10)  
 
 # Background
-
 background = pygame.image.load("background.jpg").convert()
+background = pygame.transform.scale(background, (width, height))
 
 # Player sprite
 sprite_image = pygame.image.load("sprite.png").convert_alpha()
 sprite_rect = sprite_image.get_rect()
 sprite_rect.center = (width // 2, height - 50)
-sprite_speed = 5
+sprite_speed = 1
+def gravity(sprite_rect):
+    sprite_rect.y += 3.2  # Simulates falling
 
 # Enemy sprite
 penguin_image = pygame.image.load("penguin.png").convert_alpha()
@@ -45,34 +49,32 @@ camera_x = 0
 camera_y = 0
 
 # Level Dimensions (made wider for scrolling)
-level_width = 1600  # Make the level wide enough for scrolling
-level_height = 1800
+level_width = 800  # Make the level wide enough for scrolling
+level_height = 600
 
 # Score 
 score = 0
-font = pygame.font.Font(None, 36)
 
-# Clock (frames per second)
-clock = pygame.time.Clock()
+#Font
+font = pygame.font.Font(None, 36)
 
 # Sound
 pygame.mixer.music.load("applause.wav")
 pygame.mixer.music.set_volume(0.7)
 
-
-# Game state
-game_state = "MENU"  
-
 # Buttons
 play_button = pygame.Rect(width // 2 - 100, height // 2 - 50, 200, 50)
 quit_button = pygame.Rect(width // 2 - 100, height // 2 + 50, 200, 50)
+settings_button = pygame.Rect(width // 2 - 100, height // 2 + 150, 200, 50)
 play_again_button = pygame.Rect(width // 2 - 100, height // 2, 200, 50)  # For game-over state
 pause_button = pygame.Rect(width - 100, 10, 80, 40)  # Button to pause the game
+back_button = pygame.Rect(width // 2 - 100, height // 2, 200, 50) 
 
 def menu_state():
     screen.fill((0, 0, 0))  # Clear screen (black)
     pygame.draw.rect(screen, (0, 255, 0), play_button)
     pygame.draw.rect(screen, (255, 0, 0), quit_button)
+    pygame.draw.rect(screen,  ( 190 , 190 , 190 , 255 ), settings_button)
 
     title_text = font.render("Jump", True, (255, 255, 255))
     title_rect = title_text.get_rect(center=(width // 2, height // 4))
@@ -83,14 +85,27 @@ def menu_state():
     quit_text = font.render("Quit", True, (0, 0, 0))
     quit_rect = quit_text.get_rect(center=quit_button.center)
 
+    settings_text = font.render("Settings", True, (0, 0, 0))
+    settings_rect = settings_text.get_rect(center=settings_button.center)
+
     screen.blit(title_text, title_rect)
     screen.blit(play_text, play_rect)
     screen.blit(quit_text, quit_rect)
+    screen.blit(settings_text, settings_rect)
+
+def settings_state():
+    screen.fill((50, 50, 50))  
+    settings_text = font.render("Settings", True, (255, 255, 255))
+    back_text = font.render("Back", True, (0, 0, 0))
+
+    screen.blit(settings_text, settings_text.get_rect(center=(width // 2, height // 4)))
+    pygame.draw.rect(screen, (190, 190, 190), back_button)
+    screen.blit(back_text, back_text.get_rect(center=back_button.center))
 
 def playing_state():
     global camera_x, camera_y
     global score
-
+    gravity(sprite_rect)
     keys = pygame.key.get_pressed()
 
     # Background Image
@@ -124,20 +139,14 @@ def playing_state():
     elif penguin_rect.centery > sprite_rect.centery:
         penguin_rect.y -= penguin_speed
 
+    # Prevent penguin from leaving the screen
+    penguin_rect.x = max(0, min(level_width - penguin_width, penguin_rect.x))
+    penguin_rect.y = max(0, min(level_height - penguin_height, penguin_rect.y))
+
+
     # Update camera position
     camera_x = -sprite_rect.centerx + width // 2
     camera_y = -sprite_rect.centery + height // 2
-
-    # Camera boundaries to prevent moving out of the level
-    if camera_x > 0:
-        camera_x = 0
-    if camera_x < -level_width + width:
-        camera_x = -level_width + width
-
-    if camera_y > 0:
-        camera_y = 0
-    if camera_y < -level_height + height:
-        camera_y = -level_height + height
 
 
     # Draw the player and enemy (offset by the camera)
@@ -177,6 +186,11 @@ def pause_state():
     quit_rect = quit_text.get_rect(center=quit_button.center)
     screen.blit(quit_text, quit_rect)
 
+    pygame.draw.rect(screen, (190 , 190 , 190), settings_button)
+    settings_text = font.render("Settings", True, (0, 0, 0))
+    settings_rect = settings_text.get_rect(center=settings_button.center)
+    screen.blit(settings_text, settings_rect)
+
 running = True
 while running:
     for event in pygame.event.get():
@@ -206,7 +220,7 @@ while running:
 
         # Press 'P' to pause or unpause
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_m:  
+            if event.key == pygame.K_p:  
                 if game_state == "PLAYING":
                     game_state = "PAUSE"
                 elif game_state == "PAUSE":
@@ -221,7 +235,5 @@ while running:
     elif game_state == "PAUSE":
         pause_state()
 
-
-    clock.tick(60) 
     pygame.display.flip()   
 pygame.quit()
