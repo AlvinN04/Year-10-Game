@@ -10,6 +10,8 @@ pygame.mixer.init()
 # Window Dimensions
 width = 800
 height = 600
+level_width = 800
+level_height = 600
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Side Scrolling")
 
@@ -88,6 +90,17 @@ def playing_state():
     keys = pygame.key.get_pressed()
 
     screen.blit(background, (0, 0))
+
+    # Camera boundaries to prevent moving out of the level
+    if camera_x > 0:
+        camera_x = 0
+    if camera_x < -level_width + width:
+        camera_x = -level_width + width
+
+    if camera_y > 0:
+        camera_y = 0
+    if camera_y < -level_height + height:
+        camera_y = -level_height + height
 
     # Player movement
     if keys[pygame.K_RIGHT]:
